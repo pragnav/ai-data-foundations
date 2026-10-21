@@ -1,16 +1,22 @@
-# AI Data Foundations
- 
-Hands-on work on the data layer behind retrieval-augmented generation (RAG): chunking,
 
-embedding pipelines, incremental updates, and retrieval evaluation, measured at every step.
- 
-**Background:** data engineer (Snowflake, CDC pipelines, idempotent loads) in banking,
 
-applying the same engineering discipline to AI data pipelines.
+One notebook per week; outputs are kept so results can be read without re-running.
  
 ---
  
 ## Week 1: Embeddings, chunking, incremental pipeline, model comparison
+ 
+**Notebook:** [`week1/week1_embeddings.ipynb`](week1/week1_embeddings.ipynb)
+ 
+| Section | What it does |
+
+|---|---|
+
+| 1. Embedding experiments (A–F) | What similarity captures, silent truncation, query prefixes, throughput, tokenizer differences, a minimal retriever |
+
+| 2. Token-based chunker | `chunk_by_tokens` with overlap, input validation, and tests |
+
+| 3. Pipeline + model comparison | Incremental embedding pipeline (manifest, content hashes, deletes, validation, Parquet) and a retrieval evaluation harness (golden set, recall@k, MRR) |
  
 ### Key findings (measured on a Colab CPU)
  
@@ -50,7 +56,7 @@ applying the same engineering discipline to AI data pipelines.
  
 **What the errors showed:**
 
-- **All three models failed the same condition questions** ("Is there a charge for *receiving* a wire?" retrieved the *outgoing* wire fee). A bigger model doesn't fix this; better retrieval does (a reranker that reads the question and passage together, or hybrid keyword + vector search).
+- **All three models failed the same condition questions.** "Is there a charge for *receiving* a wire?" retrieved the *outgoing* wire fee. A bigger model doesn't fix this; better retrieval does (a reranker that reads the question and passage together, or hybrid keyword + vector search).
 
 - bge confused **overdraft** (item paid) with **NSF** (item returned) on "bounced check": a domain-vocabulary gap that public leaderboards don't measure. The bge query prefix moved the correct chunk into the top 3.
  
@@ -68,13 +74,31 @@ applying the same engineering discipline to AI data pipelines.
 
 - **float32 Parquet** storage: half the size of float64, and loadable into a warehouse vector column.
  
-### What's next
-
-- **Week 2:** vector database (Qdrant), metadata filtering for multi-tenant isolation, hybrid BM25 + vector search, aimed at the condition-question failures above.
-
-- **Week 4:** cross-encoder reranking, measured against this baseline.
- 
 ### Run it
 
-Open the notebooks in Google Colab (CPU runtime is fine) and **Runtime → Run all**.
+Open [`week1/week1_embeddings.ipynb`](week1/week1_embeddings.ipynb) in Google Colab (CPU runtime is fine) and choose **Runtime → Run all**. The first run downloads two small embedding models (about 530 MB) into the Colab session.
+ 
+---
+ 
+## Roadmap
+ 
+| Week | Focus | Status |
+
+|---|---|---|
+
+| 1 | Embeddings, chunking, incremental embedding pipeline, model comparison | Done |
+
+| 2 | Vector database (Qdrant), metadata filtering for multi-tenant isolation, hybrid BM25 + vector search | Next |
+
+| 3 | Document parsing (PDFs, tables), structure-aware chunking, grounded RAG with citations | |
+
+| 4 | Reranking and query rewriting, measured against the Week 1 baseline | |
+
+| 5 | Embedding freshness with orchestration (Dagster), model migration | |
+
+| 6 | Vector search and AI functions in Snowflake | |
+
+| 7 | PII masking and access-controlled retrieval | |
+
+| 8 | RAG evaluation (faithfulness, context recall) and regression testing | |
  
