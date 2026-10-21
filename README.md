@@ -6,7 +6,7 @@ One notebook per week; outputs are kept so results can be read without re-runnin
  
 ## Week 1: Embeddings, chunking, incremental pipeline, model comparison
  
-**Notebook:** [`week1/week1_embeddings.ipynb`](week1/week1_embeddings.ipynb)
+**Notebook:** [`week1_embeddings.ipynb`](week1_embeddings.ipynb)
  
 | Section | What it does |
 
