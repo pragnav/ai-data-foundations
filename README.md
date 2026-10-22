@@ -1,3 +1,28 @@
+# AI Data Foundations
+
+ 
+
+Hands-on work on the data layer behind retrieval-augmented generation (RAG): chunking,
+embedding pipelines, incremental updates, and retrieval evaluation, measured at every step.
+
+ 
+
+**Background:** data engineer (Snowflake, CDC pipelines, idempotent loads) in banking,
+applying the same engineering discipline to AI data pipelines.
+
+ 
+
+---
+
+ 
+
+## Repository structure
+
+ai-data-foundations/
+├── README.md
+├── requirements.txt              # pinned versions
+├── .gitignore
+├── week1_embeddings.ipynb    # 3 sections: experiments A–F · chunker · pipeline + model comparison
 
 
 One notebook per week; outputs are kept so results can be read without re-running.
