@@ -51,13 +51,9 @@ ACH codes and CFR sections, one superseded fee schedule).
 ### Key findings
  
 | Finding | Result |
-
 |---|---|
-
 | **Missing freshness filter = wrong answer** | Without a date filter, the **superseded 2025 fee ranked #1** for "How much is the overdraft fee?"; with the filter, the current fee ranked #1 |
-
 | **Missing tenant filter = data leak** | Without a tenant filter, **another bank's chunk ranked #1** for bank A's query; with the server-side filter the leak test **passes** |
-
 | Code-preserving tokenization | `12 CFR 1005.17`, `R04` kept intact as single tokens for keyword search |
  
 ### Retrieval results (19 questions, current documents, tenant bank_a)
