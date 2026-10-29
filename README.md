@@ -12,7 +12,7 @@ backed by a measured result.
 
 - **Incremental, idempotent embedding:** re-runs embed 0 chunks; a document change re-embeds only what changed and deletes stale chunks.
 
-- **Honest benchmarks:** equal-weight hybrid search did not beat BM25 alone on recall@1; it exactly tied on look-alike regulation codes, which motivates weighted fusion and reranking next.
+- **Honest benchmarks:** equal-weight hybrid search did not beat BM25 alone on recall@1; it exactly tied on look-alike reglatin codes, which motivates weighted fusion and reranking next.
  
 **Background:** data engineer (Snowflake, CDC pipelines, idempotent loads) in banking,
 
@@ -59,25 +59,15 @@ ACH codes and CFR sections, one superseded fee schedule).
 ### Retrieval results (19 questions, current documents, tenant bank_a)
  
 | Method | recall@1 | recall@3 | MRR |
-
 |---|---|---|---|
-
 | BM25 | **0.79** | 0.89 | 0.84 |
-
 | Dense (MiniLM) | 0.74 | **1.00** | **0.86** |
-
 | Hybrid (RRF, equal weights) | 0.74 | 0.95 | 0.85 |
- 
 | recall@1 by type | BM25 | Dense | Hybrid |
-
 |---|---|---|---|
-
 | exact codes | **1.00** | 0.86 | 0.86 |
-
 | conditions | **0.75** | 0.50 | 0.50 |
-
 | numbers | 0.67 | **1.00** | **1.00** |
-
 | paraphrases | 0.60 | 0.60 | 0.60 |
  
 **What the errors showed:**
@@ -109,35 +99,22 @@ ACH codes and CFR sections, one superseded fee schedule).
 ### Key findings (measured on a Colab CPU)
  
 | Finding | Result |
-
 |---|---|
-
 | Embeddings capture **topic, not logic** | "fee **waived**" vs "fee **charged**": cosine **0.94** (MiniLM), **0.91** (bge-base) |
-
 | **Silent truncation** past model limits | Two 663-token texts with different endings → cosine **1.0000**; the only signal was a log warning |
-
 | Tokenizers differ | Same banking text: **28** tokens (GPT-4 / GPT-4o tokenizers) vs **29** (BERT-based embedding models) |
-
 | Throughput | MiniLM **114** chunks/s vs bge-base **15** chunks/s (**7.6× slower**) |
-
 | Cost of a 10M-chunk backfill | MiniLM **24 h / 15.4 GB** vs bge-base **190 h / 30.7 GB** (float32) |
-
 | Token-based chunking | 2,001 tokens → **25** chunks (size 100, overlap 20), matching ⌈(N−O)/(S−O)⌉ |
-
 | **Idempotent re-runs** | Re-running with no changes embedded **0** chunks |
-
 | **Incremental updates** | A fee change re-embedded only **4** chunks, kept **3** unchanged, and deleted **3** stale chunks; queries returned only the new fee |
  
 ### Model comparison (16-question golden set)
  
 | Model | recall@1 | recall@3 | MRR | Query latency | Storage / 10M |
-
 |---|---|---|---|---|---|
-
 | **all-MiniLM-L6-v2** | 0.81 | **1.00** | **0.90** | **18 ms** | **15.4 GB** |
-
 | bge-base-en-v1.5 | 0.81 | 0.94 | 0.88 | 103 ms | 30.7 GB |
-
 | bge-base + query prefix | 0.81 | **1.00** | **0.90** | 169 ms | 30.7 GB |
  
 **recall@1 by question type** (all models): exact codes **1.0**, numbers **1.0**, paraphrases **0.8**, conditions **0.5**.
@@ -161,23 +138,14 @@ All three models failed the same condition questions, so the fix is retrieval te
 ## Roadmap
  
 | Week | Focus | Status |
-
 |---|---|---|
-
 | 1 | Embeddings, chunking, incremental embedding pipeline, model comparison | Done |
-
 | 2 | Vector database, metadata filtering, tenant isolation, hybrid BM25 + vector search | Done |
-
 | 3 | Document parsing (PDFs, tables), structure-aware chunking, grounded RAG with citations | Next |
-
 | 4 | Reranking and query rewriting, measured against the Week 1–2 baselines | |
-
 | 5 | Embedding freshness with orchestration (Dagster), model migration | |
-
 | 6 | Vector search and AI functions in Snowflake | |
-
 | 7 | PII masking and access-controlled retrieval | |
-
 | 8 | RAG evaluation (faithfulness, context recall) and regression testing | |
  
 ## Run it
