@@ -32,7 +32,9 @@ applying the same engineering discipline to AI data pipelines.
 
     ├── week1_embeddings.ipynb
 
-    └── week2_vector_search.ipynb
+    ├── week2_vector_search.ipynb
+
+    └── week3_rag.ipynb
     
  
 One notebook per week; outputs are kept so results can be read without re-running.
