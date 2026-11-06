@@ -33,10 +33,46 @@ applying the same engineering discipline to AI data pipelines.
     ├── week1_embeddings.ipynb
 
     └── week2_vector_search.ipynb
+    
  
 One notebook per week; outputs are kept so results can be read without re-running.
  
 ---
+
+## Week 3 — PDF parsing + grounded RAG with citations
+ 
+Notebook: [`week3_rag.ipynb`](week3_rag.ipynb)
+ 
+Synthetic bank deposit agreement PDF (header/footer on every page, numbered sections, fee table, poisoned note) → typed elements → structure-aware chunks → Qdrant + MiniLM → `openai/gpt-oss-20b` (Groq) with JSON answers, chunk-ID citations, validation, retry and abstention. 30-question golden set (25 answerable, 5 unanswerable).
+ 
+| Metric | Result |
+|---|---|
+| Retrieval recall@1 — structure-aware vs fixed-size | **0.92** vs 0.84 |
+| Retrieval recall@3 — structure-aware vs fixed-size | 0.92 vs **1.00** |
+| Answer accuracy (25 answerable) | **0.92** |
+| Generation accuracy when the gold chunk was retrieved | **23/23** |
+| Abstention on unanswerable questions | **5/5** |
+| Citation validity (ids + numbers) | 1.00 |
+| Prompt-injection test | Pass |
+| Tokens / latency per query | 529 in / 78 out, 502 ms |
+| Illustrative cost at 100K queries/day | $38/day ≈ $1.1K/month |
+ 
+**Findings**
+ 
+- **Retrieval is the ceiling.** Both misses were retrieval failures: the single fee-table chunk (8 services in one vector) lost to overdraft prose sections. Fix: row-level table chunks + hybrid BM25 / reranker (Week 4).
+- **Citation validation ≠ correctness.** One wrong answer passed validation — real chunk, real number, wrong question. Needs an answer-relevance / faithfulness check (Week 8).
+- **Similarity scores can't detect answerability.** Answerable top scores went as low as 0.43; an unanswerable question scored 0.70. Abstention comes from the LLM + validation; the score gate is only a junk filter.
+- **Silent failures look safe.** In a first run, a retired model name made every call fail, which showed up as "100% abstention". Config errors now fail loudly; only JSON-format errors are handled softly.
+- **Poisoned content gets retrieved naturally.** The injected note appeared in the top 3 for 3 of 30 real questions.
+ 
+**Design decisions**
+ 
+- Parse into typed elements (heading / paragraph / table); headings detected by bold font + numbering; tables kept as Markdown.
+- Header/footer removal by repeated-line frequency, with digits masked.
+- Contextual header (`doc > section path`) in `embed_text` only; stable chunk IDs `doc:section:part`.
+- Grounded prompt: context as data, chunk-ID citations, JSON output, temperature 0.
+- Validation with set difference: cited IDs ⊆ retrieved IDs; numbers in answer ⊆ numbers in cited chunks; one retry, then abstain.
+has context menu
  
 ## Week 2: Vector search, metadata filters, tenant isolation, hybrid retrieval
  
@@ -141,8 +177,8 @@ All three models failed the same condition questions, so the fix is retrieval te
 |---|---|---|
 | 1 | Embeddings, chunking, incremental embedding pipeline, model comparison | Done |
 | 2 | Vector database, metadata filtering, tenant isolation, hybrid BM25 + vector search | Done |
-| 3 | Document parsing (PDFs, tables), structure-aware chunking, grounded RAG with citations | Next |
-| 4 | Reranking and query rewriting, measured against the Week 1–2 baselines | |
+| 3 | Document parsing (PDFs, tables), structure-aware chunking, grounded RAG with citations | Done |
+| 4 | Reranking and query rewriting, measured against the Week 1–2 baselines | Next |
 | 5 | Embedding freshness with orchestration (Dagster), model migration | |
 | 6 | Vector search and AI functions in Snowflake | |
 | 7 | PII masking and access-controlled retrieval | |
