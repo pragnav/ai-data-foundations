@@ -34,12 +34,54 @@ applying the same engineering discipline to AI data pipelines.
 
     ├── week2_vector_search.ipynb
 
-    └── week3_rag.ipynb
+    ├── week3_rag.ipynb
+
+    └── week4_advanced_rag.ipynb
     
  
 One notebook per week; outputs are kept so results can be read without re-running.
  
 ---
+## Week 4 — Advanced retrieval: parent-child chunks, hybrid search, reranking, query rewriting
+ 
+Notebook: [`week4_advanced_rag.ipynb`](week4_advanced_rag.ipynb)
+ 
+Same bank PDF and 30-question golden set as Week 3. Children (sentences + table rows as `Service: X; Fee: $Y; Notes: Z`, each with its section path) are searched; their parent section or full table is sent to the LLM. Ablation adds one technique at a time.
+ 
+| Config | recall@1 | recall@3 | MRR@10 | Context hit | Retrieval latency |
+|---|---|---|---|---|---|
+| A — Week 3 baseline (section chunks, dense) | 0.92 | 0.92 | 0.94 | 0.92 | 20 ms |
+| B — + child chunks → parents | 0.76 | 1.00 | 0.88 | **1.00** | 21 ms |
+| C — + hybrid BM25 (RRF) | 0.80 | 1.00 | 0.90 | 1.00 | 25 ms |
+| D — + cross-encoder rerank (final) | **0.96** | 1.00 | **0.98** | 1.00 | 837 ms (CPU) |
+| E — + guarded multi-query rewrites | 0.96 | 1.00 | 0.98 | 1.00 | 918 ms |
+ 
+| End-to-end (final = D) | Week 3 | Week 4 |
+|---|---|---|
+| Answer accuracy (25 answerable) | 0.92 | **1.00** |
+| Abstention (5 unanswerable) | 1.00 | 1.00 |
+| Citation validity | 1.00 | 1.00 |
+| Poisoned section reached context | 3/30 | 1/30 |
+| Cost at 100K queries/day (illustrative) | $38 | $38 |
+| Latency per query | ~0.5 s | ~1.5 s |
+ 
+**Findings**
+ 
+- **Chunking fixed the failures.** Row-level children took context hit from 0.92 → 1.00 on their own; both Week 3 misses were the diluted fee table.
+- **Measure context hit, not child recall@1.** Child recall@1 dropped (sibling sentences compete), but parent expansion still delivered the evidence.
+- **The reranker buys precision with latency:** recall@1 0.80 → 0.96, retrieval 25 → 837 ms on CPU.
+- **Rewrites must earn their cost.** They added nothing on this set, so the final pipeline skips them (saves an LLM call per query). A guard dropped 2/60 rewrites that lost a code, number or entity.
+- **Validator fix:** numbers from the question are allowed, preventing false rejections like "$40 is under the $50 limit".
+- **Caveat:** fixes were designed against this same 30-question set on a 17-section corpus — a held-out set is the next step (Week 8).
+ 
+**Design decisions**
+ 
+- Parents = Week 3 section/table chunks; children = sentences + `header: value` table rows, with the section path in `embed_text`.
+- Rerank children on `embed_text` (short, fits the 512-token limit, keeps section context), then expand to parents with a token budget and deduplication.
+- Tenant filter on dense search; BM25 index pre-filtered per tenant.
+- Rewrites are for retrieval only; the LLM always answers the original question.
+- Every failure is labelled by the stage where the evidence was lost (candidates → rerank/expansion → generation).
+has context menu
 
 ## Week 3 — PDF parsing + grounded RAG with citations
  
