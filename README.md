@@ -222,8 +222,8 @@ All three models failed the same condition questions, so the fix is retrieval te
 | 1 | Embeddings, chunking, incremental embedding pipeline, model comparison | Done |
 | 2 | Vector database, metadata filtering, tenant isolation, hybrid BM25 + vector search | Done |
 | 3 | Document parsing (PDFs, tables), structure-aware chunking, grounded RAG with citations | Done |
-| 4 | Reranking and query rewriting, measured against the Week 1–2 baselines | Next |
-| 5 | Embedding freshness with orchestration (Dagster), model migration | |
+| 4 | Reranking and query rewriting, measured against the Week 1–2 baselines | Done |
+| 5 | Embedding freshness with orchestration (Dagster), model migration | Next |
 | 6 | Vector search and AI functions in Snowflake | |
 | 7 | PII masking and access-controlled retrieval | |
 | 8 | RAG evaluation (faithfulness, context recall) and regression testing | |
