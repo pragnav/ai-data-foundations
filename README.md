@@ -1,10 +1,6 @@
 # AI Data Foundations
  
-**Building and measuring the data layer behind RAG**: token-based chunking, incremental
-
-embedding pipelines, tenant-isolated vector search, and hybrid retrieval, with every claim
-
-backed by a measured result.
+**Building and measuring the data layer behind RAG**: token-based chunking, incremental embedding pipelines, tenant-isolated vector search, and hybrid retrieval, with every claim backed by a measured result.
  
 **Highlights**
 
