@@ -10,9 +10,7 @@
 
 - **Honest benchmarks:** equal-weight hybrid search did not beat BM25 alone on recall@1; it exactly tied on look-alike reglatin codes, which motivates weighted fusion and reranking next.
  
-**Background:** data engineer (Snowflake, CDC pipelines, idempotent loads) in banking,
-
-applying the same engineering discipline to AI data pipelines.
+**Background:** data engineer (Snowflake, CDC pipelines, idempotent loads) in banking, applying the same engineering discipline to AI data pipelines.
  
 ## Repository structure
  
@@ -159,11 +157,7 @@ has context menu
  
 **Notebook:** [`week2_vector_search.ipynb`](week2_vector_search.ipynb)
  
-Qdrant (in-memory) with payload filters, a tenant leak test, BM25 written from scratch, and
-
-Reciprocal Rank Fusion, evaluated on a 19-question banking golden set (two tenants, look-alike
-
-ACH codes and CFR sections, one superseded fee schedule).
+Qdrant (in-memory) with payload filters, a tenant leak test, BM25 written from scratch, and Reciprocal Rank Fusion, evaluated on a 19-question banking golden set (two tenants, look-alike ACH codes and CFR sections, one superseded fee schedule).
  
 ### Key findings
  
