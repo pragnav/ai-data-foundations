@@ -36,12 +36,58 @@ applying the same engineering discipline to AI data pipelines.
 
     ├── week3_rag.ipynb
 
-    └── week4_advanced_rag.ipynb
+    ├── week4_advanced_rag.ipynb
+
+    └── week5_index_freshness.ipynb
     
  
 One notebook per week; outputs are kept so results can be read without re-running.
  
 ---
+## Week 5 — Keeping a RAG index fresh: document CDC, Dagster, blue/green
+ 
+Notebook: [`week5_index_freshness.ipynb`](week5_index_freshness.ipynb)
+ 
+Two bank documents go through three versions. A Dagster pipeline (run in-process) re-embeds only what changed, stages it, gates it with a blocking quality check, then flips it live. An embedding-model upgrade runs as a blue/green migration behind a Qdrant alias.
+ 
+`source_documents → chunk_hierarchy → change_plan → staged_index → [blocking check: golden_gate] → live_index`
+ 
+| Run | Re-embedded | ACL-only | Tombstoned | Skipped | Gate | Live? |
+
+|---|---|---|---|---|---|---|
+
+| Initial build (v1) | 46 | 0 | 0 | 0 | context hit 1.00 | ✅ |
+
+| Rerun v1 (idempotent) | 0 | 0 | 0 | 46 (both docs by doc hash) | 1.00 | ✅ |
+
+| v2 with corrupted embeddings | 2 | 4 | 2 | 39 | self-recall **0.00** | ❌ blocked — users kept v1 |
+
+| v2 | 2 | 4 | 2 | 39 (6 via doc hash) | 1.00 | ✅ |
+ 
+**Findings**
+ 
+- **Only real changes cost compute.** A fee change, a new section, a removed section and an ACL change re-embedded 2 of 45 children; the unchanged document was skipped by doc hash.
+
+- **ACL changes are payload updates, not re-embeds.** Retail users stopped seeing staff-only ACH codes immediately; staff still see them.
+
+- **A golden-set gate alone missed corrupted embeddings.** When only 2 chunks change, the golden set scored 0.818 for both the corrupt staged index and the live one. A self-retrieval check (each re-embedded chunk must find itself) blocked it.
+
+- **Write → check → flip:** new vectors are staged, checked, then flipped live before old ones are deleted, so there's no window with missing answers. Tombstones + a drift check (0 orphans) catch missed deletes.
+
+- **Blue/green MiniLM → bge-small:** both scored 1.00 with overlap@3 0.79; the swap and rollback are single atomic alias operations. A tie means the migration bought nothing measurable — a real decision would need a harder golden set or a non-quality reason.
+
+- **The hardcoded-encoder trap is silent:** querying the bge collection with MiniLM still scored 0.91 (vs 1.00) — close enough to pass a casual test. Both models are 384-dimensional, so a dimension check can't catch it. The query service takes its encoder from a model registry instead.
+ 
+**Design decisions**
+ 
+- Hash exactly what gets embedded (`embed_text`); skip key = (content hash, model).
+
+- Deterministic point IDs from (collection, chunk, hash, model) → idempotent upserts.
+
+- Blocking gate = golden-set floor + no regression vs live + self-recall + integrity count.
+
+- Retrieval-only notebook (no LLM), so the pipeline mechanics are isolated and reproducible.
+ 
 ## Week 4 — Advanced retrieval: parent-child chunks, hybrid search, reranking, query rewriting
  
 Notebook: [`week4_advanced_rag.ipynb`](week4_advanced_rag.ipynb)
@@ -223,8 +269,8 @@ All three models failed the same condition questions, so the fix is retrieval te
 | 2 | Vector database, metadata filtering, tenant isolation, hybrid BM25 + vector search | Done |
 | 3 | Document parsing (PDFs, tables), structure-aware chunking, grounded RAG with citations | Done |
 | 4 | Reranking and query rewriting, measured against the Week 1–2 baselines | Done |
-| 5 | Embedding freshness with orchestration (Dagster), model migration | Next |
-| 6 | Vector search and AI functions in Snowflake | |
+| 5 | Embedding freshness with orchestration (Dagster), model migration | Done |
+| 6 | Vector search and AI functions in Snowflake | Next |
 | 7 | PII masking and access-controlled retrieval | |
 | 8 | RAG evaluation (faithfulness, context recall) and regression testing | |
  
