@@ -53,15 +53,10 @@ Two bank documents go through three versions. A Dagster pipeline (run in-process
 `source_documents → chunk_hierarchy → change_plan → staged_index → [blocking check: golden_gate] → live_index`
  
 | Run | Re-embedded | ACL-only | Tombstoned | Skipped | Gate | Live? |
-
 |---|---|---|---|---|---|---|
-
 | Initial build (v1) | 46 | 0 | 0 | 0 | context hit 1.00 | ✅ |
-
 | Rerun v1 (idempotent) | 0 | 0 | 0 | 46 (both docs by doc hash) | 1.00 | ✅ |
-
 | v2 with corrupted embeddings | 2 | 4 | 2 | 39 | self-recall **0.00** | ❌ blocked — users kept v1 |
-
 | v2 | 2 | 4 | 2 | 39 (6 via doc hash) | 1.00 | ✅ |
  
 **Findings**
