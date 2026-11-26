@@ -32,12 +32,104 @@
 
     ├── week4_advanced_rag.ipynb
 
-    └── week5_index_freshness.ipynb
+    ├── week5_index_freshness.ipynb
+
+    └── week6_snowflake_for_ai.ipynb
     
  
 One notebook per week; outputs are kept so results can be read without re-running.
  
 ---
+## Week 6 — Snowflake for AI: VECTOR search, stream/task CDC, Cortex Search lag, Cortex Analyst
+ 
+Notebook: [`week6_snowflake_for_ai.ipynb`](week6_snowflake_for_ai.ipynb)
+ 
+The Week 5 corpus and gates, rebuilt the Snowflake way. Everything is simulated locally so it runs in Colab without an account: DuckDB `FLOAT[384]` + `array_cosine_similarity` stands in for `VECTOR(FLOAT, 384)` + `VECTOR_COSINE_SIMILARITY`; a table stream feeds a task that writes, gates and commits in one transaction; a si refreshes on`TARGET_LAG`; and a Groq model (gpt-oss-20b) plays Cortex Analyst
+
+against a semanti
+ 
+`doc_chunks → STRed → gate → COMMIT/ ROLLBACK] → emb_* table → bank_docs view`
+ 
+| Task run | Stream rows | Re-embedded | MD5 skip | Tombstoned |
+
+Gate | Committed?
+
+|---|---|---|---|---|---|---|
+
+| Initial build (xt hit 1.00 | ✅ |
+
+| Upstream full refresh of v1 | 92 (46 update pairs) | 0 | 46 | 0
+
+| 1.00 | ✅ |
+
+| No new data | 0 | — | — | — | — | skipped, no warehouse resumed
+
+|
+
+| v2 with corrupted embeddings | 5 | 2 | 0 | 2 | self-recall
+
+**0.00** | ❌ rol
+
+| v2 (replay of the same rows) | 5 | 2 | 0 | 2 | 1.00 | ✅ |
+
+| Green backfill  | 1.00 | ✅ |
+
+| v3 → blue / → green (one stream each) | 2 / 2 | 1 / 1 | 0 | 0 | 1.00 / 1.00 | ✅
+
+                                                                  **What a retail u1** (task every 5min, Cortex `TARGET_LAG` 60 min)                                 
+
+| Change | VECTOR + task | Cortex Search, ATTRIBUTES filter |     Cortex + live ACL
+
+|---|---|---|---|                                                 | Overdraft fee $erved at t=60 | — |
+
+| New section 6.4 (senior waiver) | t=10 | t=60 | — |             | Section 5.3 revm t=1 | **leakeduntil t=59** | hidden from t=1 |                                  | Section 6.3 delrved until t=59** | hidden from t=1 |                                                
+
+**Cortex Analyst simulation: text-to-SQL on 11 held-out questions (execution accura
+ 
+| Context given ty | Mean prompttokens |                                                       |---|---|---|
+
+| A: raw DDL | 0.36 (4/11) | 223 |                             | B: semantic mod |
+
+| C: semantic model + 3 verified queries | 0.82 (9/11) | 876 | 
+
+**Findings**                                                   
+
+- **A stream plus an MD5 check makes an upstream full refresh  free.** The refree stream emitted 46 update pairs; the MD5 compare skipped all 46 and nothing was   re-embedded. Unchream at all, whichdoes the job W5's doc-level hash did.                          - **The golden-gahe corrupt v2 runscored 0.818 on the golden set, the same as the live index, so passed both the 0n check.Self-recall (0.00) is the only check that blocked it, the same result as in Week
+
+- **A transaction replaces the staged state.** A second session read $35 during bitted writes areinvisible to other sessions. The rollback left the stream offsetwhere it was, so y the same 5 rowsand nothing was lost. W5 needed a `state=staged` payload plus a discard step to g
+
+- **The ACL is a join, not a copy.** The 4 ACL changes produced stream rows and 0 and the deletiontook effect at t=1, before any task ran: the drift check showed orphan rows in the join hid them.Cortex's attribute filter uses a copy made at refresh time, so ileaked the revoke 59 minutes.Over-fetching from Cortex and then joining to the live ACL tablecloses that gap.
+
+- **Freshness trade-off:** VECTOR served the new fee at t=10 (itwould have been tortex served it att=60. Cortex gives managed hybrid search, but freshness is      bounded by `TARGE always-on servingcost. VECTOR is as fresh as your task schedule, but every query is an exact scan.
+
+- **Give each consumer its own stream.** After the blue task committed, its sten task sharingthat stream would have missed v3.                                - **Blue/green man both scored 1.00, overlap@3 was 0.79, and the hardcoded-encoder trap scored 0.91.  Same corpus and m expected.Snowflake has no alias, so the swap is a `CREATE OR REPLACE VIEW`plus a registry r
+
+- **Exact scan cost grows roughly linearly:** about 122 ms per   100K rows of 384- to about 12 s perquery at 10M rows. Per-row cost fell at larger sizes because of  fixed overhead.
+
+- **Pruning needs clustering.** For a one-tenant query, the      clustered layout % pruned) and ran9.6× faster than a full scan. The unclustered layout read 40 of  40; its 2.6× camesines. Colabtimings are noisy (the identical full scan took 4.4 s on one     layout and 2.0 s up count is thereliable metric.                                                 - **The semantic nd a bare YAMLpaste introduces a naming bug.** Raw-schema failures were mostly wrong literals (`raft'`, `'wire'`),which is exactly what `sample_values` and synonyms fix, plus one dialect error (`Tfailure used thelogical name `branch_name` instead of the physicalReal Cortex Analyphysical ones;pasting the YAML into a prompt doesn't. Another fa`OPEN` filter nob
+
+- **The C-vs-B gap is noise at n=11.** Each questipoints, and C actB got (it droppedthe overdraft filter). The monthly question failedthree conditions ATE_TRUNC` datesinstead of `YYYY-MM`. The cost is real: B uses 3.2the prompt tokens
+
+- **The caller's role decides what data comes backLLM.** The same g00 as an analystand 4,586.00 as the B02 branch manager.           
+
+**Design decisions**                              
+
+- `plan_stream` keys on `chunk_id` and skips when `MD5(embed_text)`as W5, computed the way Snowflake's `MD5()` computes it.
+
+- Task = one tran + no-regression +self-recall + integrity → commit or roll back). The stream ofadvances only on
+
+- Entitlements live in a separate `chunk_acl` table that is  joined on every qe index.
+
+- The embedding registry is a table: the query path reads theencoder from it,
+
+- The SQL guard (sqlglot) allows exactly one read-only SELECTover allow-listed table functions.Schema-qualified names are rejected because they would bypassrow access policy
+
+- Execution accuracy compares result columns as multisets of values (names andtext. Verifiedqueries are asserted to be disjoint from the eval set.
+
+- Limitations: evlated; the CortexSearch stand-in is BM25 + dense RRF, not Snowflake's ranker; the
+
+LLM eval is smalle 0).
+
 ## Week 5 — Keeping a RAG index fresh: document CDC, Dagster, blue/green
  
 Notebook: [`week5_index_freshness.ipynb`](week5_index_freshness.ipynb)
@@ -255,8 +347,8 @@ All three models failed the same condition questions, so the fix is retrieval te
 | 3 | Document parsing (PDFs, tables), structure-aware chunking, grounded RAG with citations | Done |
 | 4 | Reranking and query rewriting, measured against the Week 1–2 baselines | Done |
 | 5 | Embedding freshness with orchestration (Dagster), model migration | Done |
-| 6 | Vector search and AI functions in Snowflake | Next |
-| 7 | PII masking and access-controlled retrieval | |
+| 6 | Vector search and AI functions in Snowflake | Done |
+| 7 | PII masking and access-controlled retrieval | Next |
 | 8 | RAG evaluation (faithfulness, context recall) and regression testing | |
  
 ## Run it
