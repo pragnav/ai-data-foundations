@@ -49,47 +49,30 @@ The Week 5 corpus and gates, rebuilt the Snowflake way. Everything is simulated 
 `doc_chunks → STREAM → TASK [plan_stream → embed → gate → COMMIT / ROLLBACK] → emb_* table → bank_docs view`
  
 | Task run | Stream rows | Re-embedded | MD5 skip | Tombstoned | Gate | Committed? |
-
 |---|---|---|---|---|---|---|
-
 | Initial build (v1) | 46 | 46 | 0 | 0 | context hit 1.00 | ✅ |
-
 | Upstream full refresh of v1 | 92 (46 update pairs) | 0 | 46 | 0 | 1.00 | ✅ |
-
 | No new data | 0 | — | — | — | — | skipped, no warehouse resumed |
-
 | v2 with corrupted embeddings | 5 | 2 | 0 | 2 | self-recall **0.00** | ❌ rollback, stream offset kept |
-
 | v2 (replay of the same rows) | 5 | 2 | 0 | 2 | 1.00 | ✅ |
-
 | Green backfill (bge-small) | 45 | 45 | 0 | 0 | 1.00 | ✅ |
-
 | v3 → blue / → green (one stream each) | 2 / 2 | 1 / 1 | 0 | 0 | 1.00 / 1.00 | ✅ / ✅ |
  
 **What a retail user sees after v2 lands at t=1** (task every 5 min, Cortex `TARGET_LAG` 60 min)
  
 | Change | VECTOR + task | Cortex Search, ATTRIBUTES filter | Cortex + live ACL join |
-
 |---|---|---|---|
-
 | Overdraft fee $35 → $40 | served at t=10 | served at t=60 | — |
-
 | New section 6.4 (senior waiver) | t=10 | t=60 | — |
-
 | Section 5.3 revoked from retail | hidden from t=1 | **leaked until t=59** | hidden from t=1 |
-
 | Section 6.3 deleted | hidden from t=1 | **served until t=59** | hidden from t=1 |
  
 **Cortex Analyst simulation: text-to-SQL on 11 held-out questions (execution accuracy)**
  
 | Context given to the LLM | Execution accuracy | Mean prompt tokens |
-
 |---|---|---|
-
 | A: raw DDL | 0.36 (4/11) | 223 |
-
 | B: semantic model (YAML) | 0.73 (8/11) | 722 |
-
 | C: semantic model + 3 verified queries | 0.82 (9/11) | 876 |
  
 **Findings**
